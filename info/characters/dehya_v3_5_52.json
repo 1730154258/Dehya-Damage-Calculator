@@ -1,0 +1,37 @@
+{
+    "version" : "3.4.52",
+    "notes" : "data info for dehya v3",
+
+    "profile" : {
+        "base_hp" : 15675.0,
+        "base_atk" : 265.5,
+        "base_def" : 627.9,
+        "breakout_hp" : 0.288
+    },
+
+    "talent" : {
+        "e" : {
+            "notes" : "we assume the coordinated attacks (i.e., the 'field') are unleashed by 4 times",
+
+            "level" : 10,
+
+            "10" : {
+                "indomitable_flame" : 2.032,
+                "rangeing_flame" : 2.39,
+                "field" : 1.238
+            }  
+        },
+
+        "q" : {
+            "notes" : "we assume the Flame-Mane's Fists are unleashed by 10 times for C0 and 15 times for C6",
+
+            "level" : 10,
+            
+            "10" : {
+                "flame_manes_fist" : 2.03,
+                "incineration_drive" : 2.866
+            }    
+        }   
+    }
+
+}

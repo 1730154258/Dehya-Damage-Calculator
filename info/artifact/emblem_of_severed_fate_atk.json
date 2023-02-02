@@ -1,0 +1,23 @@
+{
+    "name" : "emblem_of_severed_fate",
+    "note" : "4 recharge, 6 atk, 12 crite rate, 6 crit dmg",
+
+    "artifact_main" : {
+        "base_atk" : 311.0,
+        "base_hp" : 4780.0,
+        "atk" : 0.466,
+        "hp" : 0,
+        "crit_rate" : 0,
+        "crit_dmg" : 0.622,
+        "energy_recharge" : 0,
+        "dmg_plus" : 0.466
+    },
+    "artifact_sub_num" : {
+        "atk" : 6,
+        "hp" : 0,
+        "crit_rate" : 12,
+        "crit_dmg" : 6,
+        "energy_recharge" : 4,
+        "notes" : "the data denotes the number of terms"
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "name" : "atk_atk",
+    "note" : "automatic sub num term",
+
+    "artifact_main" : {
+        "base_atk" : 311.0,
+        "base_hp" : 4780.0,
+        "atk" : 0,
+        "hp" : 0,
+        "crit_rate" : 0,
+        "crit_dmg" : 0,
+        "energy_recharge" : 0,
+        "dmg_plus" : 0.466
+    },
+    "artifact_sub_info" : {
+        "crit" : 18,
+        "term_number" : 28
+    },
+
+    "miminum_energy_recharge" : 2.0
+}

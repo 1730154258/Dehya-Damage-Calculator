@@ -1,0 +1,15 @@
+{
+    "name" : "bennett",
+    "notes" : "Noblesse Oblige",
+    "character" : {
+        "base_atk" : 914.8,
+        "atk" : 0.2,
+        "hp" : 0,
+        "crit_rate" : 0,
+        "crit_dmg" : 0,
+        "dmg_plus" : 0,
+        "energy_recharge" : 0,
+        "defeat_reduce" : 0,
+        "resistance_reduce" : 0
+    }
+}
