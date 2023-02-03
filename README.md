@@ -1,10 +1,10 @@
 # 迪希雅伤害计算器
 
-> 最后更新时间：2023/02/01
+> 最后更新时间：2023/02/03
 > 
 > 测试服版本：3.5.52 （迪希雅v3）
 > 
-> 项目版本：v0.1
+> 项目版本：v0.2
 > 
 > 联系作者：1730154258@qq.com 邮箱或qq均可联系，欢迎指正bug、优化意见或希望的更多功能
 > 
@@ -17,8 +17,7 @@
 - [x] 主流武器、圣遗物、队友模板
 - [x] **指定充能需求下，自动分配圣遗物词条** 并进行伤害计算
 - [x] 不同武器、圣遗物类型伤害对比
-- [x] C0 命座
-- [ ] C1-C6 命座
+- [x] C0-C6 命座
 - [ ] GUI界面 / 网站
 
 ### 使用说明
@@ -28,7 +27,7 @@
 **1) 对比 28 词条 绝缘套 零命迪希雅 佩戴不同武器的单人伤害，要求保证200充能，圣遗物主副词条自动分配**
 
 ```bash
-python C0_dehya_auto_compare.py --weapon r1_beacon_of_the_reed_sea r1_redhorn_stonethresher r1_skyward_pride r1_wolfs_gravestone --artifact auto_emblem_of_severed_fate auto_emblem_of_severed_fate auto_emblem_of_severed_fate auto_emblem_of_severed_fate
+python C0_dehya_auto_compare.py --weapon r1_beacon_of_the_reed_sea r1_redhorn_stonethresher r1_skyward_pride r1_wolfs_gravestone --artifact auto_emblem_of_severed_fate auto_emblem_of_severed_fate auto_emblem_of_severed_fate auto_emblem_of_severed_fate --constellation 0 0 0 0
 ```
 
 得到计算结果：
@@ -57,7 +56,7 @@ Panel : attack / hp / energy recharge / crit rate / crit dmg = 1964 / 24969 / 20
 **2) 计算 28 指定词条（4充能 + 6攻击 + 12暴击 + 6爆伤）充火暴伤 绝缘套 0+1 迪希雅的伤害【队友：c1班尼特r5原木刀 + 800精通 c0万叶无专武】**
 
 ```bash
-python C0_dehya.py --weapon r1_beacon_of_the_reed_sea --artifact emblem_of_severed_fate_energy --detail
+python C0_dehya.py --weapon r1_beacon_of_the_reed_sea --artifact emblem_of_severed_fate_energy --constellation 0 --detail
 ```
 
 得到计算结果：
@@ -135,10 +134,11 @@ python C0_dehya.py --weapon r1_beacon_of_the_reed_sea --artifact emblem_of_sever
 #### 2. 指定武器、指定圣遗物词条的伤害计算
 
 ```bash
-python C0_dehya.py --weapon [武器配置文件名称] --artifact [圣遗物配置文件名称] [--detail]
+python C0_dehya.py --weapon [武器配置文件名称] --artifact [圣遗物配置文件名称] --constellation [命座数] [--detail]
 ```
 - weapon：武器配置文件名称，如 `r1_beacon_of_the_reed_sea`
 - artifact：圣遗物配置文件名称，如 `emblem_of_severed_fate_energy`
+- constellation：命座数，如零命 `0`
 - detail：可选，显示面板计算结果
 
 运行后，将会显示指定武器、圣遗物词条下迪希雅的面板与伤害。
@@ -148,10 +148,11 @@ python C0_dehya.py --weapon [武器配置文件名称] --artifact [圣遗物配�
 规定圣遗物**副词条总数、双爆词条数量、充能需求**，根据不同武器自动分配圣遗主/副词条并计算伤害。
 
 ```bash
-python C0_dehya_auto.py --weapon [武器配置文件名称] --artifact [圣遗物配置文件名称] [--detail]
+python C0_dehya_auto.py --weapon [武器配置文件名称] --artifact [圣遗物配置文件名称] --constellation [命座数] [--detail]
 ```
 - weapon：武器配置文件名称，如 `r1_beacon_of_the_reed_sea`
 - artifact：圣遗物配置文件名称，如 `auto_emblem_of_severed_fate_energy`
+- constellation：命座数，如零命 `0`
 - detail：可选，显示圣遗物词条分配结果、面板计算结果
 
 运行后，将会显示指定武器下，迪希雅的圣遗物词条的分配结果、面板与伤害。
@@ -167,10 +168,11 @@ python C0_dehya_auto.py --weapon [武器配置文件名称] --artifact [圣遗�
 #### 4. 自动分配圣遗物词条，对比不同武器或圣遗物的伤害计算
 
 ```bash
-python C0_dehya_auto_compare.py --weapon [多个武器配置文件名称] --artifact auto_emblem_of_severed_fate [多个圣遗物配置文件名称] [--with_teammates]
+python C0_dehya_auto_compare.py --weapon [多个武器配置文件名称] --artifact auto_emblem_of_severed_fate [多个圣遗物配置文件名称] --constellation [对应命座数] [--with_teammates]
 ```
 - weapon：多个武器配置文件名称，如 `r1_beacon_of_the_reed_sea r1_wolfs_gravestone`
 - artifact：对应的多个圣遗物配置文件名称，如 `emblem_of_severed_fate_energy emblem_of_severed_fate_energy`
+- constellation：对应的命座数，如 `0 6`
 - with_teammates：可选，显示吃队友拐的伤害对比
 
 `weapon` 和 `artifact` 参数数量应一致切一一对应，如上述实例中对比为 [精炼一 苇海信标 + 绝缘四件套] 对比 [精炼一 狼的末路 + 绝缘四件套]

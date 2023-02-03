@@ -1,5 +1,5 @@
 import argparse  
-from core.C0_dehya import compute as compute
+from core.C0_dehya import *
 
 def show_result(notes, detail, weapon, artifact, panel, damage):
     
@@ -38,6 +38,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--weapon', type=str, default='r1_beacon_of_the_reed_sea')
     parser.add_argument('--artifact', type=str, default='emblem_of_severed_fate_energy')
+    parser.add_argument('--constellation', type=int, default=0)
     parser.add_argument('--detail', action="store_true")
     args = parser.parse_args()
 
@@ -51,10 +52,12 @@ if __name__ == "__main__":
     artifact_info_path = f"info/artifact/{args.artifact}.json"
 
     detail = args.detail
+    constellation = args.constellation
 
-    panel, damage = compute(character_info_path, weapon_info_path, artifact_info_path, enemy_info_path, [], [])
+    dehya, weapon, artifact, enemy, teammates, buff = initialize(character_info_path, weapon_info_path, artifact_info_path, enemy_info_path, [], [], constellation, auto=False)
+    panel, damage = dehya.compute(weapon, artifact, teammates, buff, enemy, auto=False)
     show_result("single person", detail, args.weapon, args.artifact,  panel, damage)
 
-    panel, damage = compute(character_info_path, weapon_info_path, artifact_info_path, enemy_info_path, teammate_info_paths, buff_info_paths)
+    dehya, weapon, artifact, enemy, teammates, buff = initialize(character_info_path, weapon_info_path, artifact_info_path, enemy_info_path, teammate_info_paths, buff_info_paths, constellation, auto=False)
+    panel, damage = dehya.compute(weapon, artifact, teammates, buff, enemy, auto=False)
     show_result("with teammates", detail, args.weapon, args.artifact,  panel, damage)
-    

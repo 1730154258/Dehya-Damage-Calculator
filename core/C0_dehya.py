@@ -1,439 +1,466 @@
 import json
 
-def compute(character_info_path, weapon_info_path, artifact_info_path, enemy_info_path, teammate_info_paths, buff_info_paths):
-    ## Calculate the panel and damage
+term_atk = 0.0498
+term_hp = 0.0498
+term_crit_rate = 0.033
+term_crit_dmg = 0.066
+term_energy_recharge = 0.055
 
-    #################
-    ##  read info  ##
-    #################
-    with open(character_info_path,'r') as load_f:
-        character_info = json.load(load_f)
-    with open(weapon_info_path,'r') as load_f:
-        weapon_info = json.load(load_f)
-    with open(artifact_info_path,'r') as load_f:
-        artifact_info = json.load(load_f)
-    with open(enemy_info_path,'r') as load_f:
-        enemy_info = json.load(load_f)
-    teammate_infos = []
-    for teammate_info_path in teammate_info_paths:
-        with open(teammate_info_path,'r') as load_f:
-            teammate_infos.append(json.load(load_f))
-    buff_infos = []
-    for buff_info_path in buff_info_paths:
-        with open(buff_info_path,'r') as load_f:
-            buff_infos.append(json.load(load_f))
+class Weapon:
 
-    # enemy
-    enemy_defeat = enemy_info["defeat"] 
-    enemy_resistance = enemy_info["resistance"] 
+    def __init__(self, weapon_info_path):
 
-    # character
-    version = character_info["version"]
-    profile = character_info["profile"]
-    talent = character_info["talent"]
-
-    base_hp = profile["base_hp"]
-    base_atk = profile["base_atk"]
-    base_def = profile["base_def"]
-    breakout_hp = profile["breakout_hp"]
-
-    talent_e = talent["e"]
-    talent_e = talent_e[str(int(talent_e["level"]))]
-    talent_q = talent["q"]
-    talent_q = talent_q[str(int(talent_q["level"]))]
-
-    # weapon
-    weapon_atk = weapon_info["weapon_atk"]
-    weapon_sub = weapon_info["weapon_sub"]
-    weapon_bonus = weapon_info["weapon_bonus"]
-
-    # artifact
-    artifact_main = artifact_info["artifact_main"]
-    artifact_sub_num = artifact_info["artifact_sub_num"]
-
-    term_atk = 0.0498
-    term_hp = 0.0498
-    term_crit_rate = 0.033
-    term_crit_dmg = 0.066
-    term_energy_recharge = 0.055
-
-    #################
-    ##   panel     ##
-    #################
-
-    atk = (base_atk + weapon_atk) * (1 + weapon_sub['atk'] + weapon_bonus['atk'] + artifact_main["atk"] + artifact_sub_num["atk"] * term_atk) + artifact_main['base_atk']
-
-    hp = base_hp * (1 + weapon_sub['hp'] + weapon_bonus['hp'] + artifact_main["hp"] + artifact_sub_num["hp"] * term_hp + breakout_hp) + artifact_main['base_hp']
-
-    energy_recharge = 1 + weapon_sub['energy_recharge'] + weapon_bonus['energy_recharge'] + artifact_main["energy_recharge"] + artifact_sub_num["energy_recharge"] * term_energy_recharge
-
-    crit_rate = 0.05 + weapon_sub['crit_rate'] + weapon_bonus['crit_rate'] + artifact_main["crit_rate"] + artifact_sub_num["crit_rate"] * term_crit_rate
-
-    crit_dmg = 0.5 + weapon_sub['crit_dmg'] + weapon_bonus['crit_dmg'] + artifact_main["crit_dmg"] + artifact_sub_num["crit_dmg"] * term_crit_dmg
-
-    dmg_plus_e_coff = 1 + weapon_sub['dmg_plus'] + weapon_bonus['dmg_plus'] + artifact_main['dmg_plus']
-    dmg_plus_q_coff = 1 + weapon_sub['dmg_plus'] + weapon_bonus['dmg_plus']+ artifact_main['dmg_plus'] + weapon_bonus['dmg_plus_q']
+        with open(weapon_info_path,'r') as load_f:
+            self.weapon_info = json.load(load_f)
+            
+        # weapon
+        self.weapon_atk = self.weapon_info["weapon_atk"]
+        self.weapon_sub = self.weapon_info["weapon_sub"]
+        self.weapon_bonus = self.weapon_info["weapon_bonus"]
 
 
-    ######################
-    ##  artifact bonus  ##
-    ######################
+class Artifact:
 
-    if artifact_info["name"] == "emblem_of_severed_fate":
-        energy_recharge += 0.2
-        dmg_plus_q_coff += energy_recharge * 0.25
-    elif artifact_info["name"] == "atk_atk":
-        atk += (base_atk + weapon_atk) * 0.18 * 2
-    elif artifact_info["name"] == "atk_hp":
-        atk += (base_atk + weapon_atk) * 0.18
-        hp += base_atk * 0.20
-    elif artifact_info["name"] == "atk_pyro":
-        atk += (base_atk + weapon_atk) * 0.18
-        dmg_plus_e_coff += 0.15
-        dmg_plus_q_coff += 0.15
-    elif artifact_info["name"] == "atk_burst":
-        atk += (base_atk + weapon_atk) * 0.18
-        dmg_plus_q_coff += 0.20
-    elif artifact_info["name"] == "pyro_burst":
-        dmg_plus_e_coff += 0.15
-        dmg_plus_q_coff += 0.15
-        dmg_plus_q_coff += 0.20
-    else:
-        assert False
+    def __init__(self, artifact_info_path, auto):
 
-    #################
-    ##  teammates  ##
-    #################
-    for teammate_info in teammate_infos:
-        teammate_info = teammate_info["character"]
-        atk += teammate_info["base_atk"]
-        atk += (base_atk + weapon_atk) * teammate_info["atk"]
-        hp += base_hp * teammate_info["hp"]
-        crit_rate += teammate_info["crit_rate"]
-        crit_dmg += teammate_info["crit_dmg"]
-        dmg_plus_e_coff += teammate_info["dmg_plus"]
-        dmg_plus_q_coff += teammate_info["dmg_plus"]
-        energy_recharge += teammate_info["energy_recharge"]
-        enemy_defeat += teammate_info["defeat_reduce"]
-
-        resistance_reduce = teammate_info["resistance_reduce"]
-        resistance_reduce_part1 = min(max(0, 1 - enemy_resistance), resistance_reduce)
-        resistance_reduce_part2 = resistance_reduce - resistance_reduce_part1
-        enemy_resistance += resistance_reduce_part1 + resistance_reduce_part2 / 2
-
-    #############
-    ##  buffs  ##
-    #############
-    for buff_info in buff_infos:
-        atk += (base_atk + weapon_atk) * buff_info["atk"]
-        hp += base_hp * buff_info["hp"]
-        crit_rate += buff_info["crit_rate"]
-        crit_dmg += buff_info["crit_dmg"]
-        dmg_plus_e_coff += buff_info["dmg_plus"]
-        dmg_plus_q_coff += buff_info["dmg_plus"]
-        energy_recharge += buff_info["energy_recharge"]
-        enemy_defeat += buff_info["defeat_reduce"]
-
-        resistance_reduce = buff_info["resistance_reduce"]
-        resistance_reduce_part1 = min(max(0, 1 - enemy_resistance), resistance_reduce)
-        resistance_reduce_part2 = resistance_reduce - resistance_reduce_part1
-        enemy_resistance += resistance_reduce_part1 + resistance_reduce_part2 / 2
-
-
-    ###############
-    ##  compute  ##
-    ###############
-
-    # coff
-    crit_coff = 1 + crit_rate * crit_dmg
-    enemy_coff = enemy_defeat * enemy_resistance
-
-    # e
-    e_coff = crit_coff * dmg_plus_e_coff * enemy_coff
-    indomitable_flame_damage = talent_e["indomitable_flame"] * atk * e_coff
-    rangeing_flame_damage = talent_e["rangeing_flame"] * atk * e_coff
-    field_damage = talent_e["field"] * atk * e_coff
-
-    talent_e_damage = indomitable_flame_damage + rangeing_flame_damage + 4 * field_damage
-
-    # q
-    q_coff = crit_coff * dmg_plus_q_coff * enemy_coff
-    flame_manes_fist_damage = talent_q["flame_manes_fist"] * atk * q_coff
-    incineration_drive_damage = talent_q["incineration_drive"] * atk * q_coff
-
-    talent_q_damage = 10 * flame_manes_fist_damage + incineration_drive_damage
-
-    # results
-    panel = {
-        "atk" : atk,
-        "hp" : hp,
-        "energy_recharge" : energy_recharge,
-        "crit_rate" : crit_rate,
-        "crit_dmg" : crit_dmg,
-        "dmg_plus_e_coff" : dmg_plus_e_coff,
-        "dmg_plus_q_coff" : dmg_plus_q_coff,
-        "enemy_defeat" : enemy_defeat,
-        "enemy_resistance" : enemy_resistance,
-    }
-
-    damage = {
-        "indomitable_flame_damage" : indomitable_flame_damage,
-        "rangeing_flame_damage" : rangeing_flame_damage,
-        "field_damage" : field_damage,
-        "talent_e_damage" : talent_e_damage,
-        "flame_manes_fist_damage" : flame_manes_fist_damage,
-        "incineration_drive_damage" : incineration_drive_damage,
-        "talent_q_damage" : talent_q_damage,
-        "all_damage" : talent_e_damage + talent_q_damage
-    }
-
-    return panel, damage
-
-def compute_auto(character_info_path, weapon_info_path, artifact_info_path, enemy_info_path, teammate_info_paths, buff_info_paths):
-    ## Given the artifact's sub term num, mininum energy recharge and crit term number, calculate the panel and damage
-
-    #################
-    ##  read info  ##
-    #################
-    with open(character_info_path,'r') as load_f:
-        character_info = json.load(load_f)
-    with open(weapon_info_path,'r') as load_f:
-        weapon_info = json.load(load_f)
-    with open(artifact_info_path,'r') as load_f:
-        artifact_info = json.load(load_f)
-    with open(enemy_info_path,'r') as load_f:
-        enemy_info = json.load(load_f)
-    teammate_infos = []
-    for teammate_info_path in teammate_info_paths:
-        with open(teammate_info_path,'r') as load_f:
-            teammate_infos.append(json.load(load_f))
-    buff_infos = []
-    for buff_info_path in buff_info_paths:
-        with open(buff_info_path,'r') as load_f:
-            buff_infos.append(json.load(load_f))
-
-    # enemy
-    enemy_defeat = enemy_info["defeat"] 
-    enemy_resistance = enemy_info["resistance"] 
-
-    # character
-    version = character_info["version"]
-    profile = character_info["profile"]
-    talent = character_info["talent"]
-
-    base_hp = profile["base_hp"]
-    base_atk = profile["base_atk"]
-    base_def = profile["base_def"]
-    breakout_hp = profile["breakout_hp"]
-
-    talent_e = talent["e"]
-    talent_e = talent_e[str(int(talent_e["level"]))]
-    talent_q = talent["q"]
-    talent_q = talent_q[str(int(talent_q["level"]))]
-
-    # weapon
-    weapon_atk = weapon_info["weapon_atk"]
-    weapon_sub = weapon_info["weapon_sub"]
-    weapon_bonus = weapon_info["weapon_bonus"]
-
-    # artifact
-    artifact_main = artifact_info["artifact_main"]
-    artifact_sub_info = artifact_info["artifact_sub_info"]
-
-    term_atk = 0.05
-    term_hp = 0.05
-    term_crit_rate = 0.033
-    term_crit_dmg = 0.066
-    term_energy_recharge = 0.055
-
-    miminum_energy_recharge = artifact_info["miminum_energy_recharge"]
-    term_number_crit = artifact_sub_info["crit"]
-    term_number = artifact_sub_info["term_number"]
-
-    # auto : main term
-    energy_recharge = 1 + weapon_sub['energy_recharge'] + weapon_bonus['energy_recharge']
-
-    if energy_recharge + 0.466 > miminum_energy_recharge and energy_recharge + (term_number - term_number_crit) * term_energy_recharge > miminum_energy_recharge:
-        artifact_main["atk"] = 0.466
-        artifact_main["energy_recharge"] = 0
-    else:
-        artifact_main["atk"] = 0
-        artifact_main["energy_recharge"] = 0.466
-
-    crit_rate = 0.05 + weapon_sub['crit_rate'] + weapon_bonus['crit_rate']
-    crit_dmg = 0.5 + weapon_sub['crit_dmg'] + weapon_bonus['crit_dmg']
-
-    if crit_dmg >= 2 * crit_rate:
-        artifact_main["crit_rate"] = 0.311
-        artifact_main["crit_dmg"] = 0
-    else :
-        artifact_main["crit_rate"] = 0
-        artifact_main["crit_dmg"] = 0.622
-
-
-    # auto : sub term
-    artifact_sub_num = {}
-
-    energy_recharge += artifact_main["energy_recharge"] + (0.2 if artifact_info["name"] == "emblem_of_severed_fate" else 0.0) 
-    artifact_sub_num["energy_recharge"] = max(0, miminum_energy_recharge - energy_recharge) / term_energy_recharge
-
-    if artifact_sub_num["energy_recharge"] > term_number:
-        assert False
-    elif artifact_sub_num["energy_recharge"] > term_number - term_number_crit:
-        term_number_crit = term_number - artifact_sub_num["energy_recharge"]
-        artifact_sub_num["atk"] = 0
-        artifact_sub_num["hp"] = 0
-    else:
-        artifact_sub_num["atk"] = term_number - term_number_crit - artifact_sub_num["energy_recharge"]
-        artifact_sub_num["hp"] = 0
-
-    crit_rate += artifact_main["crit_rate"]
-    crit_dmg += artifact_main["crit_dmg"]
-
-    if crit_dmg >= 2 * crit_rate:
-        term_num_crit_rate_diff = (crit_dmg / 2 - crit_rate) / term_crit_rate
-        if term_num_crit_rate_diff > term_number_crit:
-            artifact_sub_num["crit_rate"] = term_number_crit
-            artifact_sub_num["crit_dmg"] = 0
+        self.auto = auto
+        with open(artifact_info_path,'r') as load_f:
+            self.artifact_info = json.load(load_f)
+            
+        # artifact
+        self.artifact_main = self.artifact_info["artifact_main"]
+        if not auto:
+            self.artifact_sub_num = self.artifact_info["artifact_sub_num"]
         else:
-            artifact_sub_num["crit_rate"] =  term_num_crit_rate_diff + (term_number_crit - term_num_crit_rate_diff) / 2
-            artifact_sub_num["crit_dmg"] = (term_number_crit - term_num_crit_rate_diff) / 2
-    else :
-        term_num_crit_rate_diff = (crit_rate - crit_dmg / 2) / term_crit_rate
-        if term_num_crit_rate_diff > term_number_crit:
-            artifact_sub_num["crit_rate"] = 0
-            artifact_sub_num["crit_dmg"] = term_number_crit
+            self.artifact_sub_info = self.artifact_info["artifact_sub_info"]
+    
+
+class Teammates:
+    
+    def __init__(self, teammate_info_paths):
+
+        self.teammate_infos = []
+        for teammate_info_path in teammate_info_paths:
+            with open(teammate_info_path,'r') as load_f:
+                self.teammate_infos.append(json.load(load_f))
+
+
+class Buff:
+    
+    def __init__(self, buff_info_paths):
+
+        self.buff_infos = []
+        for buff_info_path in buff_info_paths:
+            with open(buff_info_path,'r') as load_f:
+                self.buff_infos.append(json.load(load_f))
+
+
+class Enemy:
+    
+    def __init__(self, enemy_info_path):
+
+        with open(enemy_info_path,'r') as load_f:
+            self.enemy_info = json.load(load_f)
+        
+        # enemy
+        self.enemy_defeat = self.enemy_info["defeat"] 
+        self.enemy_resistance = self.enemy_info["resistance"]
+
+
+class Dehya:
+
+    def __init__(self, character_info_path, constellation):
+
+        with open(character_info_path,'r') as load_f:
+            character_info = json.load(load_f)
+ 
+        # character
+        self.version = character_info["version"]
+        self.profile = character_info["profile"]
+        self.talent = character_info["talent"]
+        self.constellation = constellation
+
+        self.base_hp = self.profile["base_hp"]
+        self.base_atk = self.profile["base_atk"]
+        self.base_def = self.profile["base_def"]
+        self.breakout_hp = self.profile["breakout_hp"]
+
+        talent_e = self.talent["e"]
+        talent_q = self.talent["q"]
+        
+        self.talent_e_level = int(talent_e["level"])
+        self.talent_q_level = int(talent_q["level"])
+
+        if self.constellation >= 3:
+            self.talent_q_level += 3
+        if self.constellation >= 5:
+            self.talent_e_level += 3
+
+        self.talent_e = talent_e[str(self.talent_e_level)]
+        self.talent_q = talent_q[str(self.talent_q_level)]
+        
+        self.c1 = True if self.constellation >= 1 else False
+        self.c2 = True if self.constellation >= 2 else False
+        self.c6 = True if self.constellation >= 6 else False
+
+    def compute_panel_basic(self, weapon, artifact):
+        
+        self.atk = (self.base_atk + weapon.weapon_atk) * (1 + weapon.weapon_sub['atk'] + weapon.weapon_bonus['atk'] + artifact.artifact_main["atk"] + artifact.artifact_sub_num["atk"] * term_atk) + artifact.artifact_main['base_atk']
+
+        self.hp = self.base_hp * (1 + weapon.weapon_sub['hp'] + weapon.weapon_bonus['hp'] + artifact.artifact_main["hp"] + artifact.artifact_sub_num["hp"] * term_hp + self.breakout_hp) + artifact.artifact_main['base_hp']
+
+        self.energy_recharge = 1 + weapon.weapon_sub['energy_recharge'] + weapon.weapon_bonus['energy_recharge'] + artifact.artifact_main["energy_recharge"] + artifact.artifact_sub_num["energy_recharge"] * term_energy_recharge
+        self.energy_recharge += (0.2 if artifact.artifact_info["name"] == "emblem_of_severed_fate" else 0.0) 
+
+        self.crit_rate = 0.05 + weapon.weapon_sub['crit_rate'] + weapon.weapon_bonus['crit_rate'] + artifact.artifact_main["crit_rate"] + artifact.artifact_sub_num["crit_rate"] * term_crit_rate
+
+        self.crit_dmg = 0.5 + weapon.weapon_sub['crit_dmg'] + weapon.weapon_bonus['crit_dmg'] + artifact.artifact_main["crit_dmg"] + artifact.artifact_sub_num["crit_dmg"] * term_crit_dmg
+
+        self.dmg_plus_e_coff = 1 + weapon.weapon_sub['dmg_plus'] + weapon.weapon_bonus['dmg_plus'] + artifact.artifact_main['dmg_plus']
+        self.dmg_plus_q_coff = 1 + weapon.weapon_sub['dmg_plus'] + weapon.weapon_bonus['dmg_plus'] + weapon.weapon_bonus['dmg_plus_q'] + artifact.artifact_main['dmg_plus'] 
+    
+    def compute_panel_basic_auto(self, weapon, artifact):
+        
+        miminum_energy_recharge = artifact.artifact_info["miminum_energy_recharge"]
+        term_number_crit = artifact.artifact_sub_info["crit"]
+        term_number = artifact.artifact_sub_info["term_number"]
+
+        # auto : main term
+        self.energy_recharge = 1 + weapon.weapon_sub['energy_recharge'] + weapon.weapon_bonus['energy_recharge']
+
+        if self.energy_recharge + 0.466 > miminum_energy_recharge and self.energy_recharge + (term_number - term_number_crit) * term_energy_recharge > miminum_energy_recharge:
+            artifact.artifact_main["atk"] = 0.466
+            artifact.artifact_main["energy_recharge"] = 0
         else:
-            artifact_sub_num["crit_rate"] = (term_number_crit - term_num_crit_rate_diff) / 2
-            artifact_sub_num["crit_dmg"] = term_num_crit_rate_diff + (term_number_crit - term_num_crit_rate_diff) / 2
+            artifact.artifact_main["atk"] = 0
+            artifact.artifact_main["energy_recharge"] = 0.466
+
+        self.crit_rate = 0.05 + weapon.weapon_sub['crit_rate'] + weapon.weapon_bonus['crit_rate']
+        self.crit_dmg = 0.5 + weapon.weapon_sub['crit_dmg'] + weapon.weapon_bonus['crit_dmg']
+
+        if self.crit_dmg >= 2 * self.crit_rate:
+            artifact.artifact_main["crit_rate"] = 0.311
+            artifact.artifact_main["crit_dmg"] = 0
+        else :
+            artifact.artifact_main["crit_rate"] = 0
+            artifact.artifact_main["crit_dmg"] = 0.622
 
 
-    #################
-    ##   panel     ##
-    #################
+        # auto : sub term
+        artifact.artifact_sub_num = {}
 
-    atk = (base_atk + weapon_atk) * (1 + weapon_sub['atk'] + weapon_bonus['atk'] + artifact_main["atk"] + artifact_sub_num["atk"] * term_atk) + artifact_main['base_atk']
+        self.energy_recharge += artifact.artifact_main["energy_recharge"] + (0.2 if artifact.artifact_info["name"] == "emblem_of_severed_fate" else 0.0) 
+        artifact.artifact_sub_num["energy_recharge"] = max(0, miminum_energy_recharge - self.energy_recharge) / term_energy_recharge
 
-    hp = base_hp * (1 + weapon_sub['hp'] + weapon_bonus['hp'] + artifact_main["hp"] + artifact_sub_num["hp"] * term_hp + breakout_hp) + artifact_main['base_hp']
+        if artifact.artifact_sub_num["energy_recharge"] > term_number:
+            assert False
+        elif artifact.artifact_sub_num["energy_recharge"] > term_number - term_number_crit:
+            term_number_crit = term_number - artifact.artifact_sub_num["energy_recharge"]
+            artifact.artifact_sub_num["atk"] = 0
+            artifact.artifact_sub_num["hp"] = 0
+        else:
+            artifact.artifact_sub_num["atk"] = term_number - term_number_crit - artifact.artifact_sub_num["energy_recharge"]
+            artifact.artifact_sub_num["hp"] = 0
 
-    energy_recharge += artifact_sub_num["energy_recharge"] * term_energy_recharge
-    crit_rate += artifact_sub_num["crit_rate"] * term_crit_rate
-    crit_dmg += artifact_sub_num["crit_dmg"] * term_crit_dmg
+        self.crit_rate += artifact.artifact_main["crit_rate"]
+        self.crit_dmg += artifact.artifact_main["crit_dmg"]
 
-    dmg_plus_e_coff = 1 + weapon_sub['dmg_plus'] + weapon_bonus['dmg_plus'] + artifact_main['dmg_plus']
-    dmg_plus_q_coff = 1 + weapon_sub['dmg_plus'] + weapon_bonus['dmg_plus']+ artifact_main['dmg_plus'] + weapon_bonus['dmg_plus_q']
-
-    ######################
-    ##  artifact bonus  ##
-    ######################
-
-    if artifact_info["name"] == "emblem_of_severed_fate":
-        dmg_plus_q_coff += energy_recharge * 0.25
-    elif artifact_info["name"] == "atk_atk":
-        atk += (base_atk + weapon_atk) * 0.18 * 2
-    elif artifact_info["name"] == "atk_hp":
-        atk += (base_atk + weapon_atk) * 0.18
-        hp += base_atk * 0.20
-    elif artifact_info["name"] == "atk_pyro":
-        atk += (base_atk + weapon_atk) * 0.18
-        dmg_plus_e_coff += 0.15
-        dmg_plus_q_coff += 0.15
-    elif artifact_info["name"] == "atk_burst":
-        atk += (base_atk + weapon_atk) * 0.18
-        dmg_plus_q_coff += 0.20
-    elif artifact_info["name"] == "pyro_burst":
-        dmg_plus_e_coff += 0.15
-        dmg_plus_q_coff += 0.15
-        dmg_plus_q_coff += 0.20
-    else:
-        assert False
+        if self.crit_dmg >= 2 * self.crit_rate:
+            term_num_crit_rate_diff = (self.crit_dmg / 2 - self.crit_rate) / term_crit_rate
+            if term_num_crit_rate_diff > term_number_crit:
+                artifact.artifact_sub_num["crit_rate"] = term_number_crit
+                artifact.artifact_sub_num["crit_dmg"] = 0
+            else:
+                artifact.artifact_sub_num["crit_rate"] =  term_num_crit_rate_diff + (term_number_crit - term_num_crit_rate_diff) / 2
+                artifact.artifact_sub_num["crit_dmg"] = (term_number_crit - term_num_crit_rate_diff) / 2
+        else :
+            term_num_crit_rate_diff = (self.crit_rate - self.crit_dmg / 2) / term_crit_rate
+            if term_num_crit_rate_diff > term_number_crit:
+                artifact.artifact_sub_num["crit_rate"] = 0
+                artifact.artifact_sub_num["crit_dmg"] = term_number_crit
+            else:
+                artifact.artifact_sub_num["crit_rate"] = (term_number_crit - term_num_crit_rate_diff) / 2
+                artifact.artifact_sub_num["crit_dmg"] = term_num_crit_rate_diff + (term_number_crit - term_num_crit_rate_diff) / 2
 
 
-    #################
-    ##  teammates  ##
-    #################
-    for teammate_info in teammate_infos:
-        teammate_info = teammate_info["character"]
-        atk += teammate_info["base_atk"]
-        atk += (base_atk + weapon_atk) * teammate_info["atk"]
-        hp += base_hp * teammate_info["hp"]
-        crit_rate += teammate_info["crit_rate"]
-        crit_dmg += teammate_info["crit_dmg"]
-        dmg_plus_e_coff += teammate_info["dmg_plus"]
-        dmg_plus_q_coff += teammate_info["dmg_plus"]
-        energy_recharge += teammate_info["energy_recharge"]
-        enemy_defeat += teammate_info["defeat_reduce"]
+        self.atk = (self.base_atk + weapon.weapon_atk) * (1 + weapon.weapon_sub['atk'] + weapon.weapon_bonus['atk'] + artifact.artifact_main["atk"] + artifact.artifact_sub_num["atk"] * term_atk) + artifact.artifact_main['base_atk']
 
-        resistance_reduce = teammate_info["resistance_reduce"]
-        resistance_reduce_part1 = min(max(0, 1 - enemy_resistance), resistance_reduce)
-        resistance_reduce_part2 = resistance_reduce - resistance_reduce_part1
-        enemy_resistance += resistance_reduce_part1 + resistance_reduce_part2 / 2
+        self.hp = self.base_hp * (1 + weapon.weapon_sub['hp'] + weapon.weapon_bonus['hp'] + artifact.artifact_main["hp"] + artifact.artifact_sub_num["hp"] * term_hp + self.breakout_hp) + artifact.artifact_main['base_hp']
 
-    #############
-    ##  buffs  ##
-    #############
-    for buff_info in buff_infos:
-        atk += (base_atk + weapon_atk) * buff_info["atk"]
-        hp += base_hp * buff_info["hp"]
-        crit_rate += buff_info["crit_rate"]
-        crit_dmg += buff_info["crit_dmg"]
-        dmg_plus_e_coff += buff_info["dmg_plus"]
-        dmg_plus_q_coff += buff_info["dmg_plus"]
-        energy_recharge += buff_info["energy_recharge"]
-        enemy_defeat += buff_info["defeat_reduce"]
+        self.energy_recharge += artifact.artifact_sub_num["energy_recharge"] * term_energy_recharge
+        self.crit_rate += artifact.artifact_sub_num["crit_rate"] * term_crit_rate
+        self.crit_dmg += artifact.artifact_sub_num["crit_dmg"] * term_crit_dmg
 
-        resistance_reduce = buff_info["resistance_reduce"]
-        resistance_reduce_part1 = min(max(0, 1 - enemy_resistance), resistance_reduce)
-        resistance_reduce_part2 = resistance_reduce - resistance_reduce_part1
-        enemy_resistance += resistance_reduce_part1 + resistance_reduce_part2 / 2
+        self.dmg_plus_e_coff = 1 + weapon.weapon_sub['dmg_plus'] + weapon.weapon_bonus['dmg_plus'] + artifact.artifact_main['dmg_plus']
+        self.dmg_plus_q_coff = 1 + weapon.weapon_sub['dmg_plus'] + weapon.weapon_bonus['dmg_plus'] + weapon.weapon_bonus['dmg_plus_q'] + artifact.artifact_main['dmg_plus']
+
+    def compute_panel_basic_auto_c6_part1(self, weapon, artifact):
+        
+        miminum_energy_recharge = artifact.artifact_info["miminum_energy_recharge"]
+        term_number_crit = artifact.artifact_sub_info["crit"]
+        term_number = artifact.artifact_sub_info["term_number"]
+
+        # auto : main term
+        self.energy_recharge = 1 + weapon.weapon_sub['energy_recharge'] + weapon.weapon_bonus['energy_recharge']
+
+        if self.energy_recharge + 0.466 > miminum_energy_recharge and self.energy_recharge + (term_number - term_number_crit) * term_energy_recharge > miminum_energy_recharge:
+            artifact.artifact_main["atk"] = 0.466
+            artifact.artifact_main["energy_recharge"] = 0
+        else:
+            artifact.artifact_main["atk"] = 0
+            artifact.artifact_main["energy_recharge"] = 0.466
+
+        self.crit_rate = 0.05 + weapon.weapon_sub['crit_rate'] + weapon.weapon_bonus['crit_rate']
+        self.crit_dmg = 0.5 + weapon.weapon_sub['crit_dmg'] + weapon.weapon_bonus['crit_dmg']
+
+        # auto : sub term
+        artifact.artifact_sub_num = {}
+
+        self.energy_recharge += artifact.artifact_main["energy_recharge"] + (0.2 if artifact.artifact_info["name"] == "emblem_of_severed_fate" else 0.0) 
+        artifact.artifact_sub_num["energy_recharge"] = max(0, miminum_energy_recharge - self.energy_recharge) / term_energy_recharge
+
+        if artifact.artifact_sub_num["energy_recharge"] > term_number:
+            assert False
+        elif artifact.artifact_sub_num["energy_recharge"] > term_number - term_number_crit:
+            term_number_crit = term_number - artifact.artifact_sub_num["energy_recharge"]
+            artifact.artifact_sub_num["atk"] = 0
+            artifact.artifact_sub_num["hp"] = 0
+        else:
+            artifact.artifact_sub_num["atk"] = term_number - term_number_crit - artifact.artifact_sub_num["energy_recharge"]
+            artifact.artifact_sub_num["hp"] = 0
+
+        self.atk = (self.base_atk + weapon.weapon_atk) * (1 + weapon.weapon_sub['atk'] + weapon.weapon_bonus['atk'] + artifact.artifact_main["atk"] + artifact.artifact_sub_num["atk"] * term_atk) + artifact.artifact_main['base_atk']
+
+        self.hp = self.base_hp * (1 + weapon.weapon_sub['hp'] + weapon.weapon_bonus['hp'] + artifact.artifact_main["hp"] + artifact.artifact_sub_num["hp"] * term_hp + self.breakout_hp) + artifact.artifact_main['base_hp']
+
+        self.energy_recharge += artifact.artifact_sub_num["energy_recharge"] * term_energy_recharge
+
+        self.dmg_plus_e_coff = 1 + weapon.weapon_sub['dmg_plus'] + weapon.weapon_bonus['dmg_plus'] + artifact.artifact_main['dmg_plus']
+        self.dmg_plus_q_coff = 1 + weapon.weapon_sub['dmg_plus'] + weapon.weapon_bonus['dmg_plus'] + weapon.weapon_bonus['dmg_plus_q'] + artifact.artifact_main['dmg_plus']
+
+        return term_number_crit
+
+    def compute_panel_basic_auto_c6_part2(self, weapon, artifact, term_number_crit):
+
+        # compute magnification
+
+        indomitable_flame_mag = self.talent_e["indomitable_flame"] * self.atk + self.talent_e["c1"] * self.hp
+        rangeing_flame_mag = self.talent_e["rangeing_flame"] * self.atk + self.talent_e["c1"] * self.hp
+        field_damage_single_mag = self.talent_e["field"] * self.atk + self.talent_e["c1"] * self.hp
+
+        e_mag = indomitable_flame_mag + rangeing_flame_mag + 5 * field_damage_single_mag
+
+        flame_manes_fist_damage_base_mag = self.talent_q["flame_manes_fist"] * self.atk + self.talent_q["c1"] * self.hp
+        incineration_drive_damage_mag = self.talent_q["incineration_drive"] * self.atk + self.talent_q["c1"] * self.hp
+            
+        q_mag_p1 = flame_manes_fist_damage_base_mag * 15
+        q_mag_p2 = incineration_drive_damage_mag
+
+        k = 0.15
+        a, b, c = e_mag, q_mag_p1, q_mag_p2
+        A, B, C = a + b + c, 0.1 * (b + c), k * (10. / 3 * b + 4 * c)
+        k1, k2 = B / A, C / A
+
+        r, d = self.crit_rate, self.crit_dmg
+        rm, dm = r + 0.331, d + 0.662
+        L_main_crit_rate = rm * d + k1 * d + k2 * rm 
+        L_main_crit_dmg = r * dm + k1 * dm + k2 * r 
+
+        # auto : main
+        if L_main_crit_rate >= L_main_crit_dmg:
+            artifact.artifact_main["crit_rate"] = 0.311
+            artifact.artifact_main["crit_dmg"] = 0
+        else :
+            artifact.artifact_main["crit_rate"] = 0
+            artifact.artifact_main["crit_dmg"] = 0.622
+
+        # auto : sub term
+        self.crit_rate += artifact.artifact_main["crit_rate"]
+        self.crit_dmg += artifact.artifact_main["crit_dmg"]
+
+        term_num_crit_rate_diff = (self.crit_rate - self.crit_dmg / 2 + k1 - k2 / 2) / term_crit_rate
+
+        if term_num_crit_rate_diff < 0:
+            if -term_num_crit_rate_diff > term_number_crit:
+                artifact.artifact_sub_num["crit_rate"] = term_number_crit
+                artifact.artifact_sub_num["crit_dmg"] = 0
+            else:
+                artifact.artifact_sub_num["crit_rate"] =  (term_number_crit - term_num_crit_rate_diff) / 2
+                artifact.artifact_sub_num["crit_dmg"] = (term_number_crit + term_num_crit_rate_diff) / 2
+        else :
+            if term_num_crit_rate_diff > term_number_crit:
+                artifact.artifact_sub_num["crit_rate"] = 0
+                artifact.artifact_sub_num["crit_dmg"] = term_number_crit
+            else:
+                artifact.artifact_sub_num["crit_rate"] = (term_number_crit + term_num_crit_rate_diff) / 2
+                artifact.artifact_sub_num["crit_dmg"] = (term_number_crit - term_num_crit_rate_diff) / 2
+
+        self.crit_rate += artifact.artifact_sub_num["crit_rate"] * term_crit_rate
+        self.crit_dmg += artifact.artifact_sub_num["crit_dmg"] * term_crit_dmg
+        
+    def compute_artifact_bonus(self, weapon, artifact):
+
+        if artifact.artifact_info["name"] == "emblem_of_severed_fate":
+            self.dmg_plus_q_coff += self.energy_recharge * 0.25
+        elif artifact.artifact_info["name"] == "atk_atk":
+            self.atk += (self.base_atk + weapon.weapon_atk) * 0.18 * 2
+        elif artifact.artifact_info["name"] == "atk_hp":
+            self.atk += (self.base_atk + weapon.weapon_atk) * 0.18
+            self.hp += self.base_atk * 0.20
+        elif artifact.artifact_info["name"] == "atk_pyro":
+            self.atk += (self.base_atk + weapon.weapon_atk) * 0.18
+            self.dmg_plus_e_coff += 0.15
+            self.dmg_plus_q_coff += 0.15
+        elif artifact.artifact_info["name"] == "atk_burst":
+            self.atk += (self.base_atk + weapon.weapon_atk) * 0.18
+            self.dmg_plus_q_coff += 0.20
+        elif artifact.artifact_info["name"] == "pyro_burst":
+            self.dmg_plus_e_coff += 0.15
+            self.dmg_plus_q_coff += 0.15
+            self.dmg_plus_q_coff += 0.20
+        else:
+            assert artifact.artifact_info["name"] == "empty"
+
+    def compute_teammates(self, weapon, artifact, teammates, enemy):
+    
+        for teammate_info in teammates.teammate_infos:
+            teammate_info = teammate_info["character"]
+            self.atk += teammate_info["base_atk"]
+            self.atk += (self.base_atk + weapon.weapon_atk) * teammate_info["atk"]
+            self.hp += self.base_hp * teammate_info["hp"]
+            self.crit_rate += teammate_info["crit_rate"]
+            self.crit_dmg += teammate_info["crit_dmg"]
+            self.dmg_plus_e_coff += teammate_info["dmg_plus"]
+            self.dmg_plus_q_coff += teammate_info["dmg_plus"]
+            self.energy_recharge += teammate_info["energy_recharge"]
+            enemy.enemy_defeat += teammate_info["defeat_reduce"]
+
+            resistance_reduce = teammate_info["resistance_reduce"]
+            resistance_reduce_part1 = min(max(0, 1 - enemy.enemy_resistance), resistance_reduce)
+            resistance_reduce_part2 = resistance_reduce - resistance_reduce_part1
+            enemy.enemy_resistance += resistance_reduce_part1 + resistance_reduce_part2 / 2
+
+    def compute_buff(self, weapon, artifact, buff, enemy):
+        
+        for buff_info in buff.buff_infos:
+            self.atk += (self.base_atk + weapon.weapon_atk) * buff_info["atk"]
+            self.hp += self.base_hp * buff_info["hp"]
+            self.crit_rate += buff_info["crit_rate"]
+            self.crit_dmg += buff_info["crit_dmg"]
+            self.dmg_plus_e_coff += buff_info["dmg_plus"]
+            self.dmg_plus_q_coff += buff_info["dmg_plus"]
+            self.energy_recharge += buff_info["energy_recharge"]
+            enemy.enemy_defeat += buff_info["defeat_reduce"]
+
+            resistance_reduce = buff_info["resistance_reduce"]
+            resistance_reduce_part1 = min(max(0, 1 - enemy.enemy_resistance), resistance_reduce)
+            resistance_reduce_part2 = resistance_reduce - resistance_reduce_part1
+            enemy.enemy_resistance += resistance_reduce_part1 + resistance_reduce_part2 / 2
+
+    def compute_constellation(self):
+
+        if self.c1 >= 1:
+            self.hp += self.base_hp * 0.2
+        if self.c2 >= 2:
+            self.dmg_plus_e_coff += 0.5
+
+    def compute_panel(self, enemy):
+        
+        panel = {
+            "atk" : self.atk,
+            "hp" : self.hp,
+            "energy_recharge" : self.energy_recharge,
+            "crit_rate" : self.crit_rate,
+            "crit_dmg" : self.crit_dmg,
+            "dmg_plus_e_coff" : self.dmg_plus_e_coff,
+            "dmg_plus_q_coff" : self.dmg_plus_q_coff,
+            "enemy_defeat" : enemy.enemy_defeat,
+            "enemy_resistance" : enemy.enemy_resistance,
+        }
+
+        return panel
+
+    def compute_damamge(self, weapon, artifact, buff, enemy):
+
+        # coff
+        enemy_coff = enemy.enemy_defeat * enemy.enemy_resistance
+
+        # e
+        e_crit_coff = 1 + self.crit_rate * self.crit_dmg
+        e_coff = e_crit_coff * self.dmg_plus_e_coff * enemy_coff
+
+        indomitable_flame_damage = (self.talent_e["indomitable_flame"] * self.atk + (self.talent_e["c1"] * self.hp if self.c1 else 0)) * e_coff
+        rangeing_flame_damage = (self.talent_e["rangeing_flame"] * self.atk + (self.talent_e["c1"] * self.hp if self.c1 else 0)) * e_coff
+        field_damage_single = (self.talent_e["field"] * self.atk + (self.talent_e["c1"] * self.hp if self.c1 else 0)) * e_coff
+        field_damage = [field_damage_single for _ in range(4 if not self.c2 else 5)]
+
+        talent_e_damage = indomitable_flame_damage + rangeing_flame_damage + sum(field_damage)
+
+        # q
+        if not self.c6:
+            q_crit_coff = 1 + self.crit_rate * self.crit_dmg
+            q_coff = q_crit_coff * self.dmg_plus_q_coff * enemy_coff
+            flame_manes_fist_damage_single = (self.talent_q["flame_manes_fist"] * self.atk + (self.talent_q["c1"] * self.hp if self.c1 else 0)) * q_coff
+            flame_manes_fist_damage = [flame_manes_fist_damage_single for _ in range(10)]
+            incineration_drive_damage = (self.talent_q["incineration_drive"] * self.atk + (self.talent_q["c1"] * self.hp if self.c1 else 0)) * q_coff
+        else:
+            q_crit_rate = self.crit_rate + 0.1
+            q_coff = self.dmg_plus_q_coff * enemy_coff
+            flame_manes_fist_damage_base = (self.talent_q["flame_manes_fist"] * self.atk + self.talent_q["c1"] * self.hp) * q_coff 
+            flame_manes_fist_damage = [flame_manes_fist_damage_base * (1 + q_crit_rate * (self.crit_dmg + (i * 0.15 if i <= 4 else 0.6))) for i in range(15)]
+            incineration_drive_damage = (self.talent_q["incineration_drive"] * self.atk + self.talent_q["c1"] * self.hp) * q_coff * (1 + q_crit_rate * (self.crit_dmg + 0.6))
+            
+        talent_q_damage = sum(flame_manes_fist_damage) + incineration_drive_damage
+
+        damage = {
+            "indomitable_flame_damage" : indomitable_flame_damage,
+            "rangeing_flame_damage" : rangeing_flame_damage,
+            "field_damage" : field_damage,
+            "talent_e_damage" : talent_e_damage,
+            "flame_manes_fist_damage" : flame_manes_fist_damage,
+            "incineration_drive_damage" : incineration_drive_damage,
+            "talent_q_damage" : talent_q_damage,
+            "all_damage" : talent_e_damage + talent_q_damage
+        }
+
+        return damage
+
+    def compute(self, weapon, artifact, teammates, buff, enemy, auto):
+
+        if not auto:
+            self.compute_panel_basic(weapon, artifact)
+        else:
+            # self.compute_panel_basic_auto(weapon, artifact)
+            if not self.c6:
+                self.compute_panel_basic_auto(weapon, artifact)
+            else:
+                term_number_crit = self.compute_panel_basic_auto_c6_part1(weapon, artifact)
 
 
-    ###############
-    ##  compute  ##
-    ###############
+        self.compute_artifact_bonus(weapon, artifact)
+        self.compute_teammates(weapon, artifact, teammates, enemy)
+        self.compute_buff(weapon, artifact, buff, enemy)
+        self.compute_constellation()
 
-    # coff
-    crit_coff = 1 + crit_rate * crit_dmg
-    enemy_coff = enemy_defeat * enemy_resistance
+        if auto and self.c6:
+            self.compute_panel_basic_auto_c6_part2(weapon, artifact, term_number_crit)
 
-    # e
-    e_coff = crit_coff * dmg_plus_e_coff * enemy_coff
-    indomitable_flame_damage = talent_e["indomitable_flame"] * atk * e_coff
-    rangeing_flame_damage = talent_e["rangeing_flame"] * atk * e_coff
-    field_damage = talent_e["field"] * atk * e_coff
-
-    talent_e_damage = indomitable_flame_damage + rangeing_flame_damage + 4 * field_damage
-
-    # q
-    q_coff = crit_coff * dmg_plus_q_coff * enemy_coff
-    flame_manes_fist_damage = talent_q["flame_manes_fist"] * atk * q_coff
-    incineration_drive_damage = talent_q["incineration_drive"] * atk * q_coff
-
-    talent_q_damage = 10 * flame_manes_fist_damage + incineration_drive_damage
+        panel = self.compute_panel(enemy)
+        damage = self.compute_damamge(weapon, artifact, buff, enemy)
 
 
-    # results
-    panel = {
-        "atk" : atk,
-        "hp" : hp,
-        "energy_recharge" : energy_recharge,
-        "crit_rate" : crit_rate,
-        "crit_dmg" : crit_dmg,
-        "dmg_plus_e_coff" : dmg_plus_e_coff,
-        "dmg_plus_q_coff" : dmg_plus_q_coff,
-        "enemy_defeat" : enemy_defeat,
-        "enemy_resistance" : enemy_resistance,
-    }
+        if not auto:
+            return panel, damage
+        else:
+            return panel, damage, artifact.artifact_main, artifact.artifact_sub_num
 
-    damage = {
-        "indomitable_flame_damage" : indomitable_flame_damage,
-        "rangeing_flame_damage" : rangeing_flame_damage,
-        "field_damage" : field_damage,
-        "talent_e_damage" : talent_e_damage,
-        "flame_manes_fist_damage" : flame_manes_fist_damage,
-        "incineration_drive_damage" : incineration_drive_damage,
-        "talent_q_damage" : talent_q_damage,
-        "all_damage" : talent_e_damage + talent_q_damage
-    }
 
-    return panel, damage, artifact_main, artifact_sub_num
+def initialize(character_info_path, weapon_info_path, artifact_info_path, enemy_info_path, teammate_info_paths, buff_info_paths, constellation, auto):
+    dehya = Dehya(character_info_path, constellation)
+    weapon = Weapon(weapon_info_path)
+    artifact = Artifact(artifact_info_path, auto)
+    enemy = Enemy(enemy_info_path)
+    teammates = Teammates(teammate_info_paths)
+    buff = Buff(buff_info_paths)
+    return dehya, weapon, artifact, enemy, teammates, buff
+

@@ -14,7 +14,7 @@
     },
     "artifact_sub_num" : {
         "atk" : 6,
-        "hp" : 0,
+        "hp" : 4,
         "crit_rate" : 12,
         "crit_dmg" : 6,
         "energy_recharge" : 4,

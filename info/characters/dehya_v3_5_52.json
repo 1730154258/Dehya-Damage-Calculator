@@ -9,16 +9,25 @@
         "breakout_hp" : 0.288
     },
 
+    "constellation" : 6,
     "talent" : {
         "e" : {
-            "notes" : "we assume the coordinated attacks (i.e., the 'field') are unleashed by 4 times",
+            "notes" : "we assume the coordinated attacks (i.e., the 'field') are unleashed by 4 times for C0 and 5 times for C2",
 
             "level" : 10,
 
             "10" : {
                 "indomitable_flame" : 2.032,
                 "rangeing_flame" : 2.39,
-                "field" : 1.238
+                "field" : 1.238,
+                "c1" : 0.036
+            },
+            
+            "13" : {
+                "indomitable_flame" : 2.399,
+                "rangeing_flame" : 2.822,
+                "field" : 1.462,
+                "c1" : 0.036
             }  
         },
 
@@ -29,8 +38,15 @@
             
             "10" : {
                 "flame_manes_fist" : 2.03,
-                "incineration_drive" : 2.866
-            }    
+                "incineration_drive" : 2.866,
+                "c1" : 0.06
+            },
+            
+            "13" : {
+                "flame_manes_fist" : 2.397,
+                "incineration_drive" : 3.383,
+                "c1" : 0.06
+            }
         }   
     }
 
